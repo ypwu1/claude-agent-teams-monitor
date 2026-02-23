@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# claude-agent-teams-monitor
+
+A real-time dashboard for monitoring Claude Code Agent Teams. Watch your multi-agent workflows live — track team members, tasks, messages, and usage statistics as they change.
+
+## Overview
+
+When you run multi-agent teams in Claude Code, this dashboard gives you a live view of what's happening:
+
+- **Teams** — see all active teams and their members
+- **Tasks** — track task status (pending / in_progress / completed) and ownership
+- **Messages** — view agent inbox messages and communication timelines
+- **Stats** — visualize token usage, daily activity, and cost across models
+- **Logs** — tail debug logs from active Claude Code sessions
+
+Data is streamed via WebSocket and updates instantly as Claude Code writes to `~/.claude/`.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Next.js Frontend (port 3000)                        │
+│  Dashboard · Team detail · Log viewer · Stats chart  │
+└───────────────────┬─────────────────────────────────┘
+                    │ WebSocket
+┌───────────────────▼─────────────────────────────────┐
+│  WebSocket Server (port 3001)                        │
+│  Express + ws · chokidar file watchers               │
+└───────────────────┬─────────────────────────────────┘
+                    │ reads
+┌───────────────────▼─────────────────────────────────┐
+│  ~/.claude/                                          │
+│  ├── teams/{name}/config.json                        │
+│  ├── teams/{name}/inboxes/{agent}.json               │
+│  ├── tasks/{name}/{id}.json                          │
+│  ├── stats-cache.json                                │
+│  └── debug/{session-id}.txt                          │
+└─────────────────────────────────────────────────────┘
+```
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- pnpm
+
+### Install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Run
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Start both servers (Next.js and the WebSocket server) in separate terminals:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Terminal 1 — WebSocket server (file watcher + data broadcaster)
+pnpm ws
 
-## Learn More
+# Terminal 2 — Next.js frontend
+pnpm dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000) to view the dashboard.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The WebSocket server must be running for live updates. Without it, the dashboard will show a disconnected status but otherwise won't crash.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Command | Description |
+|---|---|
+| `pnpm dev` | Start Next.js dev server with Turbopack |
+| `pnpm ws` | Start WebSocket server |
+| `pnpm build` | Build Next.js for production |
+| `pnpm start` | Start Next.js production server |
+| `pnpm test` | Run tests in watch mode (Vitest) |
+| `pnpm test:run` | Run tests once |
+| `pnpm lint` | Lint with ESLint |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Frontend**: Next.js 16, React 19, Tailwind CSS 4
+- **Backend**: Express 5, ws (WebSocket), chokidar (file watching)
+- **Testing**: Vitest, React Testing Library
+- **Language**: TypeScript
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx              # Dashboard (home)
+│   ├── team/[name]/          # Team detail page
+│   ├── logs/                 # Log viewer page
+│   └── api/                  # REST API routes (teams, stats, logs)
+├── components/
+│   ├── TeamCard.tsx           # Team summary card
+│   ├── TaskBoard.tsx          # Kanban-style task board
+│   ├── MessageTimeline.tsx    # Agent message history
+│   ├── StatsChart.tsx         # Token usage / activity charts
+│   ├── LogViewer.tsx          # Debug log tail viewer
+│   ├── AgentBadge.tsx         # Agent avatar/badge
+│   ├── Sidebar.tsx            # Navigation sidebar
+│   └── ConnectionStatus.tsx   # WebSocket connection indicator
+├── hooks/
+│   └── useWebSocket.ts        # WebSocket state management
+└── lib/
+    ├── parsers.ts             # File parsers for ~/.claude/ data
+    └── types.ts               # Shared TypeScript types
+server/
+└── ws-server.ts              # Express + WebSocket + chokidar server
+```

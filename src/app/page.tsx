@@ -1,65 +1,81 @@
-import Image from "next/image";
+'use client';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import ConnectionStatus from '@/components/ConnectionStatus';
+import TeamCard from '@/components/TeamCard';
+import StatsChart from '@/components/StatsChart';
 
-export default function Home() {
+export default function Dashboard() {
+  const { teams, stats, connectionStatus } = useWebSocket();
+
+  const totalTasks = teams.reduce((sum, t) => sum + t.tasks.length, 0);
+  const totalMessages = teams.reduce(
+    (sum, t) => sum + t.inboxes.reduce((s, i) => s + i.messages.length, 0),
+    0
+  );
+  const totalAgents = teams.reduce(
+    (sum, t) => sum + t.config.members.length,
+    0
+  );
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="text-sm text-[#71717a] mt-0.5">
+            Monitor your Claude Code Agent Teams
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <ConnectionStatus status={connectionStatus} />
+      </div>
+
+      {/* Global stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-lg bg-[#131318] border border-[#27272a] p-4">
+          <div className="text-2xl font-bold text-white">{teams.length}</div>
+          <div className="text-xs text-[#71717a] mt-1">Active Teams</div>
         </div>
-      </main>
+        <div className="rounded-lg bg-[#131318] border border-[#27272a] p-4">
+          <div className="text-2xl font-bold text-white">{totalAgents}</div>
+          <div className="text-xs text-[#71717a] mt-1">Total Agents</div>
+        </div>
+        <div className="rounded-lg bg-[#131318] border border-[#27272a] p-4">
+          <div className="text-2xl font-bold text-white">{totalTasks}</div>
+          <div className="text-xs text-[#71717a] mt-1">Total Tasks</div>
+        </div>
+        <div className="rounded-lg bg-[#131318] border border-[#27272a] p-4">
+          <div className="text-2xl font-bold text-white">{totalMessages}</div>
+          <div className="text-xs text-[#71717a] mt-1">Total Messages</div>
+        </div>
+      </div>
+
+      {/* Team cards */}
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-3">Teams</h2>
+        {teams.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {teams.map((team) => (
+              <TeamCard key={team.config.name} team={team} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg bg-[#131318] border border-[#27272a] p-8 text-center">
+            <p className="text-[#71717a]">
+              No teams found. Teams will appear when you create Agent Teams in
+              Claude Code.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-3">
+          Usage Statistics
+        </h2>
+        <StatsChart stats={stats} />
+      </div>
     </div>
   );
 }
